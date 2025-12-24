@@ -1,7 +1,7 @@
 // === 1. 信件内容配置 ===
 const letterHTML = `
-    <div id="letter-wrapper" style="font-family: 'Georgia', serif; text-align: left; color: #111; line-height: 1.8; padding-bottom: 50px;">
-        <h3 style="color: #c2185b;">亲爱的小小姐:</h3>
+    <div id="letter-wrapper" style="font-family: 'Georgia', serif; text-align: left; line-height: 1.8; padding-bottom: 50px;">
+        <h3 style="color: #d45d79;">亲爱的小小姐:</h3>
         <p>见字如晤，展信舒颜。</p>
         <p>这是一封停滞许久的信，记得初识你时也是这般的深秋，巨大的落叶从天而降，仿佛一场枯黄色的大雪，恍若苍穹碎落。现在想来有些记忆这般深刻也许是因为一身晴朗的人或许从未远离，只是以记忆的形式相伴。</p>
         <p>记得那时总是难过，但现在回想起来却像是水彩风，用色温暖而苍老，像是水洗风吹日晒后，失色在阳光里的老照片，平静的让人想落泪。而你像是那照片上不经意滴上的墨水，褪色成独一无二的涟漪，留下书香味的余韵。</p>
@@ -25,14 +25,14 @@ const letterHTML = `
         <p style="text-align: right;">你的，</p>
         <p style="text-align: right; font-weight: bold;">阿涛写于12月14号</p>
         
-        <hr style="border: 0; border-top: 1px dashed #666; margin: 30px 0;">
+        <hr style="border: 0; border-top: 1px dashed #ccc; margin: 30px 0;">
         
-        <h3 style="color: #c2185b;">续:</h3>
+        <h3 style="color: #d45d79;">续:</h3>
         <p>现在是2025年的12月21号，冬至，不知道你吃饺子了没有，愿你平安喜乐，原本想就这样上面内容直接发给你的，但看来看去更多内容像是写给自己的，所以又补了一段。</p>
         
         <br>
         
-        <h3 style="color: #c2185b;">亲爱的石燕藏:</h3>
+        <h3 style="color: #d45d79;">亲爱的石藏燕:</h3>
         <p>请允许我这样称呼，一如我们是许久不见的朋友，尽管未曾相逢。</p>
         <p>写下一封信的感觉很奇妙，它会穿越崇山峻岭，再越过时间的沟壑，也许还有千山万水，记下的却是当时的心情，像是某种时间胶囊。</p>
         <p>这是一封等待你打开的尺素书。</p>
@@ -52,7 +52,7 @@ const letterHTML = `
 
 // === 2. 初始化场景 ===
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x000000, 0.001);
+scene.fog = new THREE.FogExp2(0x000000, 0.0015);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 3, 25);
@@ -66,14 +66,12 @@ document.getElementById('scene-container').appendChild(renderer.domElement);
 const textureLoader = new THREE.TextureLoader();
 const particleTexture = textureLoader.load('https://assets.codepen.io/127738/dotTexture.png');
 
-let isSpinning = false; 
-let isDispersing = false; 
+let animationState = 'idle'; 
 
-// =========================================
 // === 3. 分层松树结构 ===
-// =========================================
 const treeGroup = new THREE.Group();
 scene.add(treeGroup);
+let treeMaterial, ringMaterial, heartMaterial;
 
 function createLayeredTree() {
     const geometry = new THREE.BufferGeometry();
@@ -81,58 +79,37 @@ function createLayeredTree() {
     const colors = [];
     const sizes = [];
     const velocities = [];
-
     const particleCount = 18000; 
-
     const colorPalette = [
-        new THREE.Color(0x191970), // 午夜蓝
-        new THREE.Color(0x4169e1), // 皇家蓝
-        new THREE.Color(0x87cefa), // 天光蓝
-        new THREE.Color(0xf0f8ff)  // 冰魄白
+        new THREE.Color(0x191970), new THREE.Color(0x4169e1), 
+        new THREE.Color(0x87cefa), new THREE.Color(0xf0f8ff)
     ];
-
-    const params = {
-        height: 20,
-        maxRadius: 7.5,
-        layers: 8, 
-    };
+    const params = { height: 20, maxRadius: 7.5, layers: 8 };
 
     for (let i = 0; i < particleCount; i++) {
         const h = Math.random();
         if (h > 0.5 && Math.random() < Math.pow(h, 2) * 0.6) continue;
-
         const scaledH = h * params.layers;
         const layerIndex = Math.floor(scaledH);
         const layerProgress = scaledH - layerIndex;
-
         if (layerProgress > 0.8) continue; 
-
         const branchShape = Math.pow(1 - layerProgress, 0.55); 
         const globalConeRadius = (1 - h) * params.maxRadius;
         const rRatio = Math.sqrt(Math.random()); 
         
         let currentRadius = globalConeRadius * branchShape * rRatio;
         currentRadius *= 1.2; 
-
         const angle = Math.random() * Math.PI * 2;
-        
         let x = Math.cos(angle) * currentRadius;
         let z = Math.sin(angle) * currentRadius;
         let y = h * params.height - params.height / 2;
         y -= (currentRadius / params.maxRadius) * 1.5;
-
         x += (Math.random() - 0.5) * 0.3;
         z += (Math.random() - 0.5) * 0.3;
         y += (Math.random() - 0.5) * 0.3;
 
         positions.push(x, y, z);
-
-        // 【核心修改】大幅增加随机飞散的速度，为了“布满全屏”
-        // vx, vz 不再依赖原来的 x,z 位置，而是全向随机炸开
-        const vx = (Math.random() - 0.5) * 0.5; // 速度快！
-        const vz = (Math.random() - 0.5) * 0.5; // 速度快！
-        const vy = (Math.random() - 0.5) * 0.5; // 上下乱飞
-        velocities.push(vx, vy, vz);
+        velocities.push(0, 0, 0); 
 
         let color;
         if (rRatio > 0.85) {
@@ -143,30 +120,20 @@ function createLayeredTree() {
         colors.push(color.r, color.g, color.b);
         sizes.push((Math.random() * 0.5 + 0.2) * (1.1 - h * 0.6)); 
     }
-
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
     geometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
 
-    const material = new THREE.PointsMaterial({
-        size: 0.2, 
-        sizeAttenuation: true, 
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        vertexColors: true,
-        map: particleTexture,
-        transparent: true,
-        opacity: 0.9
+    treeMaterial = new THREE.PointsMaterial({
+        size: 0.2, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        vertexColors: true, map: particleTexture, transparent: true, opacity: 0.9
     });
-
-    const points = new THREE.Points(geometry, material);
+    const points = new THREE.Points(geometry, treeMaterial);
     treeGroup.add(points);
     return points;
 }
-
 const layeredTree = createLayeredTree();
-
 
 // === 4. 底部涟漪 ===
 function createWideRipples() {
@@ -175,60 +142,43 @@ function createWideRipples() {
     const colors = [];
     const sizes = [];
     const velocities = []; 
-    
     const ringCount = 3;
     for(let r = 0; r < ringCount; r++) {
         const radius = 8 + r * 2.5; 
         const particlesPerRing = 450; 
-        
         for(let i=0; i<particlesPerRing; i++) {
             const angle = (i / particlesPerRing) * Math.PI * 2;
             let x = Math.cos(angle) * radius;
             let z = Math.sin(angle) * radius;
             let y = -11; 
-
             x += (Math.random() - 0.5) * 0.6;
             z += (Math.random() - 0.5) * 0.6;
-
             positions.push(x, y, z);
             colors.push(0.8, 0.9, 1.0); 
             sizes.push(Math.random() * 0.3 + 0.1);
-
-            velocities.push((Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5);
+            velocities.push(0,0,0);
         }
     }
-    
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
     geometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
 
-    const material = new THREE.PointsMaterial({
-        size: 0.2,
-        map: particleTexture,
-        vertexColors: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        transparent: true,
-        opacity: 0.3
+    ringMaterial = new THREE.PointsMaterial({
+        size: 0.2, map: particleTexture, vertexColors: true, blending: THREE.AdditiveBlending,
+        depthWrite: false, transparent: true, opacity: 0.3
     });
-    
-    const rings = new THREE.Points(geometry, material);
+    const rings = new THREE.Points(geometry, ringMaterial);
     treeGroup.add(rings);
     return rings;
 }
 const baseRings = createWideRipples();
 
-
-// =========================================
 // === 5. 粉色发光爱心树顶 ===
-// =========================================
 const heartGroup = new THREE.Group();
 heartGroup.position.set(0, 10.5, 0); 
 treeGroup.add(heartGroup);
-
 let heartParticles; 
-
 function createPinkHeart() {
     const geometry = new THREE.BufferGeometry();
     const positions = [];
@@ -236,55 +186,39 @@ function createPinkHeart() {
     const sizes = [];
     const velocities = [];
     const count = 600;
-
     for (let i = 0; i < count; i++) {
         const t = Math.random() * Math.PI * 2;
         let x = 16 * Math.pow(Math.sin(t), 3);
         let y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
         let z = 0;
-
         const scale = 0.06; 
         x *= scale; y *= scale; z *= scale;
-
         const fillRatio = Math.sqrt(Math.random());
         x *= fillRatio; y *= fillRatio; 
         z += (Math.random() - 0.5) * 0.3 * fillRatio;
-
         positions.push(x, y, z);
-
-        velocities.push((Math.random()-0.5) * 0.5, (Math.random()-0.5) * 0.5, (Math.random()-0.5) * 0.5);
-
+        velocities.push(0,0,0);
         if (fillRatio < 0.4) colors.push(1, 1, 1); 
         else colors.push(1.0, 0.5, 0.7); 
-
         sizes.push(Math.random() * 0.4 + 0.2);
     }
-
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
     geometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
 
-    const material = new THREE.PointsMaterial({
-        size: 0.2,
-        map: particleTexture,
-        vertexColors: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        transparent: true,
-        opacity: 1.0
+    heartMaterial = new THREE.PointsMaterial({
+        size: 0.2, map: particleTexture, vertexColors: true, blending: THREE.AdditiveBlending,
+        depthWrite: false, transparent: true, opacity: 1.0
     });
-
-    heartParticles = new THREE.Points(geometry, material);
+    heartParticles = new THREE.Points(geometry, heartMaterial);
     heartGroup.add(heartParticles);
 }
-
 createPinkHeart();
-
 
 // === 6. 背景稀疏星光 ===
 const snowGeo = new THREE.BufferGeometry();
-const snowCount = 1000; 
+const snowCount = 3000; 
 const snowPos = [];
 const snowColors = [];
 for(let i=0; i<snowCount; i++) {
@@ -294,71 +228,114 @@ for(let i=0; i<snowCount; i++) {
 snowGeo.setAttribute('position', new THREE.Float32BufferAttribute(snowPos, 3));
 snowGeo.setAttribute('color', new THREE.Float32BufferAttribute(snowColors, 3));
 const snowMat = new THREE.PointsMaterial({
-    size: 0.15, vertexColors: true, transparent: true, opacity: 0.5, 
+    size: 0.2, vertexColors: true, transparent: true, opacity: 0.6, 
     map: particleTexture, blending: THREE.AdditiveBlending, depthWrite: false
 });
 const snow = new THREE.Points(snowGeo, snowMat);
 scene.add(snow);
 
-
-// === 7. 动画循环 ===
+// === 7. 物理引擎 ===
 const clock = new THREE.Clock();
+let driftTriggered = false;
 
-function updateParticles(object, speedMultiplier) {
+function triggerGentleDrift(object, forceMultiplier) {
     const positions = object.geometry.attributes.position.array;
     const velocities = object.geometry.attributes.velocity.array;
     const count = positions.length / 3;
-
     for (let i = 0; i < count; i++) {
-        positions[i*3]     += velocities[i*3] * speedMultiplier;
-        positions[i*3 + 1] += velocities[i*3 + 1] * speedMultiplier;
-        positions[i*3 + 2] += velocities[i*3 + 2] * speedMultiplier;
+        const x = positions[i*3];
+        const y = positions[i*3 + 1];
+        const z = positions[i*3 + 2];
+        const length = Math.sqrt(x*x + y*y + z*z) + 0.001;
+        const nx = x / length;
+        const ny = y / length;
+        const nz = z / length;
+        velocities[i*3] = nx * forceMultiplier * (0.5 + Math.random() * 0.5);
+        velocities[i*3 + 1] = ny * forceMultiplier * (0.5 + Math.random() * 0.5);
+        velocities[i*3 + 2] = nz * forceMultiplier * (0.5 + Math.random() * 0.5);
     }
-    object.geometry.attributes.position.needsUpdate = true;
+    object.geometry.attributes.velocity.needsUpdate = true;
 }
 
+function applyAscensionPhysics(object) {
+    if (treeMaterial.opacity < 0.01) return;
+    const positions = object.geometry.attributes.position.array;
+    const velocities = object.geometry.attributes.velocity.array;
+    const count = positions.length / 3;
+    for (let i = 0; i < count; i++) {
+        velocities[i*3] *= 0.95;     
+        velocities[i*3 + 2] *= 0.95; 
+        velocities[i*3 + 1] += 0.003; 
+        if(velocities[i*3+1] > 0.1) velocities[i*3+1] = 0.1;
+        positions[i*3] += velocities[i*3];
+        positions[i*3 + 1] += velocities[i*3 + 1];
+        positions[i*3 + 2] += velocities[i*3 + 2];
+    }
+    object.geometry.attributes.position.needsUpdate = true;
+    object.geometry.attributes.velocity.needsUpdate = true;
+}
+
+// === 8. 动画主循环 ===
 function animate() {
     requestAnimationFrame(animate);
     const time = clock.getElapsedTime();
 
-    if (isSpinning) {
-        // === 【关键修改】旋转变得很慢 ===
-        // 0.005 很小，保证转得很慢
+    const snowPosArr = snow.geometry.attributes.position.array;
+    if (animationState === 'flowingback') {
+        for(let i=1; i<snowCount*3; i+=3) {
+            snowPosArr[i] += 0.05; 
+            if(snowPosArr[i] > 40) snowPosArr[i] = -40; 
+        }
+    } else {
+        const snowSpeed = animationState === 'spinning' ? 0.15 : 0.03; 
+        for(let i=1; i<snowCount*3; i+=3) {
+            snowPosArr[i] -= snowSpeed;
+            if(snowPosArr[i] < -40) snowPosArr[i] = 40;
+        }
+    }
+    snow.geometry.attributes.position.needsUpdate = true;
+
+    if (animationState === 'spinning') {
         treeGroup.rotation.y -= 0.005; 
         baseRings.rotation.y += 0.005;
-    } else if (isDispersing) {
-        // === 【关键修改】散开速度极快，铺满屏幕 ===
-        // 速度乘数设为 0.5 (配合上面很大的随机速度)
-        updateParticles(layeredTree, 0.5);
-        updateParticles(baseRings, 0.5);
-        if(heartParticles) updateParticles(heartParticles, 0.5);
+
+    } else if (animationState === 'drifting') {
+        if (!driftTriggered) {
+            triggerGentleDrift(layeredTree, 0.8); 
+            triggerGentleDrift(baseRings, 0.8);
+            if(heartParticles) triggerGentleDrift(heartParticles, 1.0); 
+            driftTriggered = true;
+            setTimeout(() => { animationState = 'flowingback'; }, 50);
+        }
+
+    } else if (animationState === 'flowingback') {
+        applyAscensionPhysics(layeredTree);
+        applyAscensionPhysics(baseRings);
+        if(heartParticles) applyAscensionPhysics(heartParticles);
+        treeMaterial.opacity *= 0.98;
+        ringMaterial.opacity *= 0.98;
+        heartMaterial.opacity *= 0.98;
+
     } else {
-        // 正常待机
         treeGroup.rotation.y = -time * 0.08;
         baseRings.rotation.y = time * 0.05;
         const scale = 1 + Math.sin(time * 3) * 0.05;
         heartGroup.scale.set(scale, scale, scale);
     }
-
-    // 永远存在的背景雪花
-    const positions = snow.geometry.attributes.position.array;
-    for(let i=1; i<snowCount*3; i+=3) {
-        positions[i] -= 0.02;
-        if(positions[i] < -35) positions[i] = 35;
-    }
-    snow.geometry.attributes.position.needsUpdate = true;
     
     renderer.render(scene, camera);
 }
 animate();
 
 
-// === 8. 交互逻辑 (旋转 -> 散开 -> 显信) ===
+// === 9. 交互逻辑 (旋转 -> 解体 -> 升空 -> 绽放) ===
 const overlay = document.getElementById('overlay');
 const letterCard = document.getElementById('letter-card');
 const letterContentContainer = document.getElementById('letter-content');
 const bgm = document.getElementById('bgm');
 let isOpened = false;
+
+letterContentContainer.innerHTML = letterHTML;
 
 overlay.addEventListener('click', () => {
     if(isOpened) return;
@@ -368,41 +345,39 @@ overlay.addEventListener('click', () => {
     overlay.style.opacity = '0';
     setTimeout(() => { overlay.style.display = 'none'; }, 1000);
     
-    // === 步骤1：开始慢速旋转 ===
-    isSpinning = true;
-    
-    // 旋转持续时间延长到 8 秒，因为转得慢
+    // 阶段1：旋转 (8s)
+    animationState = 'spinning';
     const spinDuration = 8000;
     
-    // 镜头同时拉远
     let progress = 0;
     const startZ = camera.position.z;
     const startY = camera.position.y;
     const interval = setInterval(() => {
-        progress += 0.005; // 进度也变慢
+        progress += 0.005; 
         if(progress >= 1) clearInterval(interval);
-        
         const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-        
-        camera.position.z = startZ + 15 * ease; 
-        camera.position.y = startY - 2 * ease;
+        camera.position.z = startZ + 18 * ease; 
+        camera.position.y = startY - 3 * ease;
         treeGroup.position.y = -8 * ease; 
     }, spinDuration / 200); 
 
-    // === 步骤2：旋转结束，瞬间炸开 ===
+    // 阶段2：解体
     setTimeout(() => {
-        isSpinning = false;
-        isDispersing = true;
+        animationState = 'drifting';
     }, spinDuration);
 
-    // === 步骤3：炸开后，显示透明信件 ===
+    // 阶段3：发射升空 (树解体1s后)
+    const launchDelay = spinDuration + 1000;
     setTimeout(() => {
-        letterCard.classList.remove('hidden');
-        void letterCard.offsetWidth;
-        letterCard.classList.add('visible');
-        
-        letterContentContainer.innerHTML = letterHTML;
+        letterCard.classList.add('launched');
+    }, launchDelay);
 
+    // 阶段4：高空绽放 (升空飞行3.6s左右开始展开，消除停顿)
+    // CSS升空是4.0s，我们在3.6s左右就触发展开，让惯性接上
+    const expandDelay = launchDelay + 3600;
+    setTimeout(() => {
+        letterCard.classList.add('expanded');
+        
         const wrapper = letterContentContainer.firstElementChild;
         const lines = Array.from(wrapper.children);
 
@@ -412,14 +387,17 @@ overlay.addEventListener('click', () => {
             line.style.transition = 'all 0.8s ease-out';
         });
 
-        lines.forEach((line, index) => {
-            setTimeout(() => {
-                line.style.opacity = '1';
-                line.style.transform = 'translateY(0)';
-            }, index * 200);
-        });
+        // 几乎立刻开始出字，不要等待
+        setTimeout(() => {
+            lines.forEach((line, index) => {
+                setTimeout(() => {
+                    line.style.opacity = '1';
+                    line.style.transform = 'translateY(0)';
+                }, index * 350);
+            });
+        }, 100);
 
-    }, spinDuration + 500); 
+    }, expandDelay); 
 });
 
 window.addEventListener('resize', () => {
@@ -428,6 +406,6 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 window.closeLetter = function() {
-    letterCard.classList.remove('visible');
+    letterCard.classList.remove('launched', 'expanded');
     location.reload(); 
 };

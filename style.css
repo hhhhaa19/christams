@@ -62,59 +62,82 @@ body, html {
 /* --- 信件卡片容器 --- */
 #letter-card {
     position: absolute; 
-    top: 50%; 
+    
+    /* 初始状态：深藏在底部 */
+    top: 110%; 
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.95);
+    transform: translate(-50%, 0) scale(0.02);
+    
     width: 90%; 
     max-width: 600px;
-    max-height: 85vh; 
+    max-height: 75vh; 
     z-index: 50;
+    
     opacity: 0; 
     pointer-events: none; 
-    transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
     display: flex;
     flex-direction: column;
+
+    /* 运动曲线 */
+    transition: 
+        top 4.0s cubic-bezier(0.25, 1, 0.5, 1),      
+        opacity 4.0s ease-out,
+        transform 5.0s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 2.0s ease; /* 阴影变化过渡 */
 }
 
-#letter-card.visible {
+/* 【状态2：发射升空】红色的火球 */
+#letter-card.launched {
+    top: 15%; /* 飞向高空 */
+    
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(0.06);
+    
+    /* 核心保留红色光晕，像烟花弹 */
+    box-shadow: 0 0 60px 30px rgba(255, 80, 80, 0.95);
+}
+
+/* 【状态3：绽放展开】变回正常信纸 */
+#letter-card.expanded {
+    top: 50%; /* 回落到中间 */
+    
     opacity: 1; 
     pointer-events: auto; 
     transform: translate(-50%, -50%) scale(1);
+    
+    /* 阴影变回普通的黑色投影，不再发红光 */
+    box-shadow: 0 15px 60px rgba(0, 0, 0, 0.6);
 }
 
-/* --- 【关键修改】高清晰度信纸 --- */
+/* --- 【关键修改】信纸样式回退到清晰版 --- */
 .paper {
-    /* 1. 提高不透明度到 0.85 (85%)，保证背景足够亮 */
-    /* 2. 使用米白色 (255, 252, 245) 增加温暖感 */
+    /* 1. 背景改回温暖的米白色 (不透明度 0.85) */
     background: rgba(255, 252, 245, 0.85); 
     
-    /* 依然保留磨砂质感 */
     backdrop-filter: blur(15px); 
     -webkit-backdrop-filter: blur(15px);
-
-    /* 边框稍微亮一点 */
+    
+    /* 2. 边框改回淡白色 */
     border: 1px solid rgba(255, 255, 255, 0.6);
     
     padding: 30px 40px;
     border-radius: 15px;
-    
-    /* 加重阴影，让纸张更有悬浮感，和背景区分开 */
-    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
-    
     position: relative;
     
-    /* 3. 文字颜色改为深灰色，去掉白色描边，保证清晰 */
-    color: #2c3e50; 
-    font-weight: normal; /* 不用太粗，深色本身就清楚 */
-    text-shadow: none;   /* 去掉文字阴影，防止模糊 */
+    /* 3. 文字颜色改回深灰色 (清晰易读) */
+    color: #4a4a4a; 
     
+    font-weight: normal;
+    text-shadow: none;   
     height: 100%;
     overflow-y: auto; 
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch; 
+    
+    transition: all 4s ease; 
 }
 
-/* 滚动条美化 */
 .paper::-webkit-scrollbar {
     width: 6px; 
 }
@@ -122,7 +145,7 @@ body, html {
     background: transparent; 
 }
 .paper::-webkit-scrollbar-thumb {
-    background: rgba(212, 93, 121, 0.3); /* 淡粉色条 */
+    background: rgba(212, 93, 121, 0.3); 
     border-radius: 3px;
 }
 .paper::-webkit-scrollbar-thumb:hover {
@@ -146,10 +169,14 @@ body, html {
 
 @media (max-width: 600px) {
     .paper {
-        padding: 25px 20px; /* 手机上左右边距调小，增加可视面积 */
+        padding: 25px 20px; 
     }
-    #letter-card {
+    #letter-card.launched {
+        top: 20%; 
+    }
+    #letter-card.expanded {
+        top: 50%;
         width: 92%;
-        max-height: 80vh; 
+        max-height: 75vh; 
     }
 }
