@@ -1,8 +1,7 @@
 // === 1. 信件内容配置 ===
-// 保持 HTML 结构，方便我们做逐行显现动画
 const letterHTML = `
-    <div id="letter-wrapper" style="font-family: 'Georgia', serif; text-align: left; color: #4a4a4a; line-height: 1.8; padding-bottom: 50px;">
-        <h3 style="color: #d45d79;">亲爱的小小姐:</h3>
+    <div id="letter-wrapper" style="font-family: 'Georgia', serif; text-align: left; color: #111; line-height: 1.8; padding-bottom: 50px;">
+        <h3 style="color: #c2185b;">亲爱的小小姐:</h3>
         <p>见字如晤，展信舒颜。</p>
         <p>这是一封停滞许久的信，记得初识你时也是这般的深秋，巨大的落叶从天而降，仿佛一场枯黄色的大雪，恍若苍穹碎落。现在想来有些记忆这般深刻也许是因为一身晴朗的人或许从未远离，只是以记忆的形式相伴。</p>
         <p>记得那时总是难过，但现在回想起来却像是水彩风，用色温暖而苍老，像是水洗风吹日晒后，失色在阳光里的老照片，平静的让人想落泪。而你像是那照片上不经意滴上的墨水，褪色成独一无二的涟漪，留下书香味的余韵。</p>
@@ -26,14 +25,14 @@ const letterHTML = `
         <p style="text-align: right;">你的，</p>
         <p style="text-align: right; font-weight: bold;">阿涛写于12月14号</p>
         
-        <hr style="border: 0; border-top: 1px dashed #ccc; margin: 30px 0;">
+        <hr style="border: 0; border-top: 1px dashed #666; margin: 30px 0;">
         
-        <h3 style="color: #d45d79;">续:</h3>
+        <h3 style="color: #c2185b;">续:</h3>
         <p>现在是2025年的12月21号，冬至，不知道你吃饺子了没有，愿你平安喜乐，原本想就这样上面内容直接发给你的，但看来看去更多内容像是写给自己的，所以又补了一段。</p>
         
         <br>
         
-        <h3 style="color: #d45d79;">亲爱的石燕藏:</h3>
+        <h3 style="color: #c2185b;">亲爱的石燕藏:</h3>
         <p>请允许我这样称呼，一如我们是许久不见的朋友，尽管未曾相逢。</p>
         <p>写下一封信的感觉很奇妙，它会穿越崇山峻岭，再越过时间的沟壑，也许还有千山万水，记下的却是当时的心情，像是某种时间胶囊。</p>
         <p>这是一封等待你打开的尺素书。</p>
@@ -45,14 +44,13 @@ const letterHTML = `
         <p>我想触摸你的灵魂，摸摸你的头告诉你我在，也许我们生活的交集会越来越少，也许有一天我们会越来越淡，然后在某个平常的一天不在联系，但只是希望今后的你，在遇到不开心的时刻，在遇到低谷，不要灰心，至少有那么一个人被你所吸引，你的温柔、细心，也许还有一点点悲伤，曾经是、以后也是。</p>
         <p>原谅我，我实在无法许诺未来，无法承诺永远，所以我想说，明天见。</p>
         <p>愿你幸福，无论是否与我有关。</p>
-        <p>愿你天天开心，但不开心也行，平安就好。</p>
         <br>
         <p style="text-align: right;">你的，</p>
         <p style="text-align: right; font-weight: bold;">金涛</p>
     </div>
 `;
 
-// === 2. 初始化场景 (背景、相机、渲染器) ===
+// === 2. 初始化场景 ===
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x000000, 0.001);
 
@@ -68,8 +66,11 @@ document.getElementById('scene-container').appendChild(renderer.domElement);
 const textureLoader = new THREE.TextureLoader();
 const particleTexture = textureLoader.load('https://assets.codepen.io/127738/dotTexture.png');
 
+let isSpinning = false; 
+let isDispersing = false; 
+
 // =========================================
-// === 3. 分层松树结构 (冰雪蓝版) ===
+// === 3. 分层松树结构 ===
 // =========================================
 const treeGroup = new THREE.Group();
 scene.add(treeGroup);
@@ -79,15 +80,15 @@ function createLayeredTree() {
     const positions = [];
     const colors = [];
     const sizes = [];
+    const velocities = [];
 
     const particleCount = 18000; 
 
-    // 冰雪蓝渐变色系
     const colorPalette = [
-        new THREE.Color(0x191970), // 午夜蓝 (深邃内部)
-        new THREE.Color(0x4169e1), // 皇家蓝 (主体)
-        new THREE.Color(0x87cefa), // 天光蓝 (亮部)
-        new THREE.Color(0xf0f8ff)  // 冰魄白 (雪顶)
+        new THREE.Color(0x191970), // 午夜蓝
+        new THREE.Color(0x4169e1), // 皇家蓝
+        new THREE.Color(0x87cefa), // 天光蓝
+        new THREE.Color(0xf0f8ff)  // 冰魄白
     ];
 
     const params = {
@@ -98,19 +99,14 @@ function createLayeredTree() {
 
     for (let i = 0; i < particleCount; i++) {
         const h = Math.random();
-        
-        // 顶部稀疏化
         if (h > 0.5 && Math.random() < Math.pow(h, 2) * 0.6) continue;
 
-        // 分层计算
         const scaledH = h * params.layers;
         const layerIndex = Math.floor(scaledH);
         const layerProgress = scaledH - layerIndex;
 
-        // 制造层间空隙
         if (layerProgress > 0.8) continue; 
 
-        // 形状修正：伞状
         const branchShape = Math.pow(1 - layerProgress, 0.55); 
         const globalConeRadius = (1 - h) * params.maxRadius;
         const rRatio = Math.sqrt(Math.random()); 
@@ -123,18 +119,21 @@ function createLayeredTree() {
         let x = Math.cos(angle) * currentRadius;
         let z = Math.sin(angle) * currentRadius;
         let y = h * params.height - params.height / 2;
-
-        // 下垂效果
         y -= (currentRadius / params.maxRadius) * 1.5;
 
-        // 随机噪点
         x += (Math.random() - 0.5) * 0.3;
         z += (Math.random() - 0.5) * 0.3;
         y += (Math.random() - 0.5) * 0.3;
 
         positions.push(x, y, z);
 
-        // 颜色分配
+        // 【核心修改】大幅增加随机飞散的速度，为了“布满全屏”
+        // vx, vz 不再依赖原来的 x,z 位置，而是全向随机炸开
+        const vx = (Math.random() - 0.5) * 0.5; // 速度快！
+        const vz = (Math.random() - 0.5) * 0.5; // 速度快！
+        const vy = (Math.random() - 0.5) * 0.5; // 上下乱飞
+        velocities.push(vx, vy, vz);
+
         let color;
         if (rRatio > 0.85) {
              color = Math.random() > 0.5 ? colorPalette[3] : colorPalette[2];
@@ -142,13 +141,13 @@ function createLayeredTree() {
              color = Math.random() > 0.6 ? colorPalette[1] : colorPalette[0];
         }
         colors.push(color.r, color.g, color.b);
-
         sizes.push((Math.random() * 0.5 + 0.2) * (1.1 - h * 0.6)); 
     }
 
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    geometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
 
     const material = new THREE.PointsMaterial({
         size: 0.2, 
@@ -169,12 +168,13 @@ function createLayeredTree() {
 const layeredTree = createLayeredTree();
 
 
-// === 4. 底部涟漪 (冰蓝白色) ===
+// === 4. 底部涟漪 ===
 function createWideRipples() {
     const geometry = new THREE.BufferGeometry();
     const positions = [];
     const colors = [];
     const sizes = [];
+    const velocities = []; 
     
     const ringCount = 3;
     for(let r = 0; r < ringCount; r++) {
@@ -193,12 +193,15 @@ function createWideRipples() {
             positions.push(x, y, z);
             colors.push(0.8, 0.9, 1.0); 
             sizes.push(Math.random() * 0.3 + 0.1);
+
+            velocities.push((Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5, (Math.random()-0.5)*0.5);
         }
     }
     
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    geometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
 
     const material = new THREE.PointsMaterial({
         size: 0.2,
@@ -218,17 +221,20 @@ const baseRings = createWideRipples();
 
 
 // =========================================
-// === 5. 粉色发光爱心树顶 (无光晕) ===
+// === 5. 粉色发光爱心树顶 ===
 // =========================================
 const heartGroup = new THREE.Group();
 heartGroup.position.set(0, 10.5, 0); 
 treeGroup.add(heartGroup);
+
+let heartParticles; 
 
 function createPinkHeart() {
     const geometry = new THREE.BufferGeometry();
     const positions = [];
     const colors = [];
     const sizes = [];
+    const velocities = [];
     const count = 600;
 
     for (let i = 0; i < count; i++) {
@@ -246,7 +252,8 @@ function createPinkHeart() {
 
         positions.push(x, y, z);
 
-        // 爱心颜色：粉色 + 亮白
+        velocities.push((Math.random()-0.5) * 0.5, (Math.random()-0.5) * 0.5, (Math.random()-0.5) * 0.5);
+
         if (fillRatio < 0.4) colors.push(1, 1, 1); 
         else colors.push(1.0, 0.5, 0.7); 
 
@@ -256,6 +263,7 @@ function createPinkHeart() {
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    geometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
 
     const material = new THREE.PointsMaterial({
         size: 0.2,
@@ -267,14 +275,14 @@ function createPinkHeart() {
         opacity: 1.0
     });
 
-    const heartParticles = new THREE.Points(geometry, material);
+    heartParticles = new THREE.Points(geometry, material);
     heartGroup.add(heartParticles);
 }
 
 createPinkHeart();
 
 
-// === 6. 背景稀疏星光 (纯白) ===
+// === 6. 背景稀疏星光 ===
 const snowGeo = new THREE.BufferGeometry();
 const snowCount = 1000; 
 const snowPos = [];
@@ -296,16 +304,43 @@ scene.add(snow);
 // === 7. 动画循环 ===
 const clock = new THREE.Clock();
 
+function updateParticles(object, speedMultiplier) {
+    const positions = object.geometry.attributes.position.array;
+    const velocities = object.geometry.attributes.velocity.array;
+    const count = positions.length / 3;
+
+    for (let i = 0; i < count; i++) {
+        positions[i*3]     += velocities[i*3] * speedMultiplier;
+        positions[i*3 + 1] += velocities[i*3 + 1] * speedMultiplier;
+        positions[i*3 + 2] += velocities[i*3 + 2] * speedMultiplier;
+    }
+    object.geometry.attributes.position.needsUpdate = true;
+}
+
 function animate() {
     requestAnimationFrame(animate);
     const time = clock.getElapsedTime();
 
-    treeGroup.rotation.y = -time * 0.08;
-    baseRings.rotation.y = time * 0.05;
+    if (isSpinning) {
+        // === 【关键修改】旋转变得很慢 ===
+        // 0.005 很小，保证转得很慢
+        treeGroup.rotation.y -= 0.005; 
+        baseRings.rotation.y += 0.005;
+    } else if (isDispersing) {
+        // === 【关键修改】散开速度极快，铺满屏幕 ===
+        // 速度乘数设为 0.5 (配合上面很大的随机速度)
+        updateParticles(layeredTree, 0.5);
+        updateParticles(baseRings, 0.5);
+        if(heartParticles) updateParticles(heartParticles, 0.5);
+    } else {
+        // 正常待机
+        treeGroup.rotation.y = -time * 0.08;
+        baseRings.rotation.y = time * 0.05;
+        const scale = 1 + Math.sin(time * 3) * 0.05;
+        heartGroup.scale.set(scale, scale, scale);
+    }
 
-    const scale = 1 + Math.sin(time * 3) * 0.05;
-    heartGroup.scale.set(scale, scale, scale);
-
+    // 永远存在的背景雪花
     const positions = snow.geometry.attributes.position.array;
     for(let i=1; i<snowCount*3; i+=3) {
         positions[i] -= 0.02;
@@ -318,7 +353,7 @@ function animate() {
 animate();
 
 
-// === 8. 交互逻辑 (信件逐行显现) ===
+// === 8. 交互逻辑 (旋转 -> 散开 -> 显信) ===
 const overlay = document.getElementById('overlay');
 const letterCard = document.getElementById('letter-card');
 const letterContentContainer = document.getElementById('letter-content');
@@ -333,45 +368,50 @@ overlay.addEventListener('click', () => {
     overlay.style.opacity = '0';
     setTimeout(() => { overlay.style.display = 'none'; }, 1000);
     
-    // 场景切换动画
+    // === 步骤1：开始慢速旋转 ===
+    isSpinning = true;
+    
+    // 旋转持续时间延长到 8 秒，因为转得慢
+    const spinDuration = 8000;
+    
+    // 镜头同时拉远
     let progress = 0;
     const startZ = camera.position.z;
     const startY = camera.position.y;
     const interval = setInterval(() => {
-        progress += 0.01;
+        progress += 0.005; // 进度也变慢
         if(progress >= 1) clearInterval(interval);
         
         const ease = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
         
-        camera.position.z = startZ + 12 * ease; 
+        camera.position.z = startZ + 15 * ease; 
         camera.position.y = startY - 2 * ease;
-        
         treeGroup.position.y = -8 * ease; 
-        layeredTree.material.opacity = 0.85 - ease * 0.6; 
-        baseRings.material.opacity = 0.4 - ease * 0.3;
-    }, 16);
+    }, spinDuration / 200); 
 
-    // 显示信件并开始逐行动画
+    // === 步骤2：旋转结束，瞬间炸开 ===
+    setTimeout(() => {
+        isSpinning = false;
+        isDispersing = true;
+    }, spinDuration);
+
+    // === 步骤3：炸开后，显示透明信件 ===
     setTimeout(() => {
         letterCard.classList.remove('hidden');
         void letterCard.offsetWidth;
         letterCard.classList.add('visible');
         
-        // 1. 放入 HTML
         letterContentContainer.innerHTML = letterHTML;
 
-        // 2. 获取 letter-wrapper 里的所有子元素 (标题、段落、横线)
         const wrapper = letterContentContainer.firstElementChild;
         const lines = Array.from(wrapper.children);
 
-        // 3. 初始状态：隐藏所有行
         lines.forEach(line => {
             line.style.opacity = '0';
             line.style.transform = 'translateY(20px)';
             line.style.transition = 'all 0.8s ease-out';
         });
 
-        // 4. 逐行显现 (每隔 200ms 显示一行)
         lines.forEach((line, index) => {
             setTimeout(() => {
                 line.style.opacity = '1';
@@ -379,7 +419,7 @@ overlay.addEventListener('click', () => {
             }, index * 200);
         });
 
-    }, 1500);
+    }, spinDuration + 500); 
 });
 
 window.addEventListener('resize', () => {

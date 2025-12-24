@@ -1,15 +1,14 @@
-/* 全局设定：禁止页面整体滚动，防止3D背景乱动 */
+/* 全局设定 */
 body, html { 
     margin: 0; 
     padding: 0; 
-    overflow: hidden; /* 关键：锁死背景 */
+    overflow: hidden; 
     background: #000000; 
     font-family: 'Georgia', 'Microsoft YaHei', serif; 
     width: 100%;
     height: 100%;
 }
 
-/* 3D 场景容器 */
 #scene-container { 
     position: fixed; 
     top: 0; 
@@ -27,14 +26,14 @@ body, html {
     width: 100%; 
     height: 100%;
     background: rgba(0,0,0,0.6);
-    z-index: 100; /* 保证在最上层 */
+    z-index: 100; 
     display: flex; 
     justify-content: center; 
     align-items: center;
     color: white; 
     cursor: pointer;
     transition: opacity 1s;
-    user-select: none; /* 防止误选文字 */
+    user-select: none; 
 }
 
 #overlay .content { 
@@ -66,88 +65,91 @@ body, html {
     top: 50%; 
     left: 50%;
     transform: translate(-50%, -50%) scale(0.95);
-    /* 宽度设置 */
     width: 90%; 
     max-width: 600px;
-    /* 高度限制：这一点非常重要，不能超过屏幕 */
     max-height: 85vh; 
     z-index: 50;
     opacity: 0; 
-    pointer-events: none; /* 没出现前不阻挡鼠标 */
+    pointer-events: none; 
     transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     display: flex;
     flex-direction: column;
 }
 
-/* 激活状态：信件浮现 */
 #letter-card.visible {
     opacity: 1; 
-    pointer-events: auto; /* 出现后允许鼠标交互（滚动） */
+    pointer-events: auto; 
     transform: translate(-50%, -50%) scale(1);
 }
 
-/* --- 信纸样式 --- */
+/* --- 【关键修改】高清晰度信纸 --- */
 .paper {
-    background: rgba(255, 252, 245, 0.95); /* 暖白信纸 */
-    backdrop-filter: blur(10px); /* 磨砂玻璃质感 */
+    /* 1. 提高不透明度到 0.85 (85%)，保证背景足够亮 */
+    /* 2. 使用米白色 (255, 252, 245) 增加温暖感 */
+    background: rgba(255, 252, 245, 0.85); 
+    
+    /* 依然保留磨砂质感 */
+    backdrop-filter: blur(15px); 
+    -webkit-backdrop-filter: blur(15px);
+
+    /* 边框稍微亮一点 */
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    
     padding: 30px 40px;
     border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 
-                0 0 100px rgba(255, 182, 193, 0.2); /* 淡淡的粉色光晕 */
+    
+    /* 加重阴影，让纸张更有悬浮感，和背景区分开 */
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+    
     position: relative;
-    color: #4a4a4a;
     
-    /* === 关键滚动设置 === */
+    /* 3. 文字颜色改为深灰色，去掉白色描边，保证清晰 */
+    color: #2c3e50; 
+    font-weight: normal; /* 不用太粗，深色本身就清楚 */
+    text-shadow: none;   /* 去掉文字阴影，防止模糊 */
+    
     height: 100%;
-    overflow-y: auto; /* 允许垂直滚动 */
+    overflow-y: auto; 
     overflow-x: hidden;
-    
-    /* 平滑滚动体验 */
     -webkit-overflow-scrolling: touch; 
 }
 
-/* --- 美化滚动条 (Webkit浏览器) --- */
+/* 滚动条美化 */
 .paper::-webkit-scrollbar {
-    width: 6px; /* 很细的滚动条 */
+    width: 6px; 
 }
-
 .paper::-webkit-scrollbar-track {
     background: transparent; 
 }
-
 .paper::-webkit-scrollbar-thumb {
-    background: rgba(212, 93, 121, 0.3); /* 淡淡的粉红色条 */
+    background: rgba(212, 93, 121, 0.3); /* 淡粉色条 */
     border-radius: 3px;
 }
-
 .paper::-webkit-scrollbar-thumb:hover {
-    background: rgba(212, 93, 121, 0.6); /* 鼠标放上去变深 */
+    background: rgba(212, 93, 121, 0.6); 
 }
 
-/* 关闭按钮 */
 .close-btn {
     position: absolute; 
     top: 15px; 
     right: 20px;
     font-size: 28px; 
     cursor: pointer; 
-    color: #ccc;
+    color: #888; 
     transition: color 0.3s;
     z-index: 10;
     line-height: 1;
 }
-
 .close-btn:hover {
     color: #d45d79;
 }
 
-/* 移动端适配 */
 @media (max-width: 600px) {
     .paper {
-        padding: 25px 25px; /* 手机上边距小一点 */
+        padding: 25px 20px; /* 手机上左右边距调小，增加可视面积 */
     }
     #letter-card {
-        width: 95%;
-        max-height: 80vh; /* 手机键盘弹出时留出空间 */
+        width: 92%;
+        max-height: 80vh; 
     }
 }
